@@ -242,28 +242,42 @@ position = tokens[0]
 square = 0
 
 # function to validate a fen
+# TODO: should this return a dataclass instead of a dict? Probably
 
-errors = {
-    0: 'No errors.',
-    1: 'FEN string must contain six space-delimited fields.',
-    2: '6th field (move number) must be a positive integer.',
-    3: '5th field (half move counter) must be a non-negative integer.',
-    4: '4th field (en-passant square) is invalid.',
-    5: '3rd field (castling availability) is invalid.',
-    6: '2nd field (side to move) is invalid.',
-    7: '1st field (piece positions) does not contain 8 \'/\'-delimited rows.',
-    8: '1st field (piece positions) is invalid [consecutive numbers].',
-    9: '1st field (piece positions) is invalid [invalid piece].',
-    10: '1st field (piece positions) is invalid [row too large].',
-    11: 'Illegal en-passant square',
-}
+def validate_fen(fen):
+    errors = {
+        0: 'No errors.',
+        1: 'FEN string must contain six space-delimited fields.',
+        2: '6th field (move number) must be a positive integer.',
+        3: '5th field (half move counter) must be a non-negative integer.',
+        4: '4th field (en-passant square) is invalid.',
+        5: '3rd field (castling availability) is invalid.',
+        6: '2nd field (side to move) is invalid.',
+        7: '1st field (piece positions) does not contain 8 \'/\'-delimited rows.',
+        8: '1st field (piece positions) is invalid [consecutive numbers].',
+        9: '1st field (piece positions) is invalid [invalid piece].',
+        10: '1st field (piece positions) is invalid [row too large].',
+        11: 'Illegal en-passant square',
+    }
 
-# 1st criterion: 6 space-seperated fields? 
-tokens = re.split('\s+', fen)
-if len(tokens) != 6:
-    print(errors[1])
-    #return {valid: false, error_number: 1, error: errors[1]}
-if not tokens[5].isnumeric() or int(tokens[5]) <= 0:
-    print(errors[2])
-    #return {valid: false, error_number: 2, error: errors[2]};
+    # 1st criterion: 6 space-seperated fields? 
+    tokens = re.split('\s+', fen)
+    if len(tokens) != 6:
+        return {
+            "valid": False,
+            "error_number": 1,
+            "error": errors[1]
+        }
 
+    if not tokens[5].isnumeric() or int(tokens[5]) <= 0:
+        return {
+            "valid": False, 
+            "error_number": 2, 
+            "error": errors[2]
+        }
+    else:
+        return { 
+            "valid": True,
+            "error_number": 0,
+            "error": errors[0]
+        }
