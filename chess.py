@@ -244,6 +244,13 @@ square = 0
 # function to validate a fen
 # TODO: should this return a dataclass instead of a dict? Probably
 
+from typing import NamedTuple
+
+class ValidationResult(NamedTuple):
+    valid: bool
+    error_number: int
+    error: str
+
 def validate_fen(fen):
     errors = {
         0: 'No errors.',
@@ -263,21 +270,9 @@ def validate_fen(fen):
     # 1st criterion: 6 space-seperated fields? 
     tokens = re.split('\s+', fen)
     if len(tokens) != 6:
-        return {
-            "valid": False,
-            "error_number": 1,
-            "error": errors[1]
-        }
+        return ValidationResult(False, 1, errors[1])
 
     if not tokens[5].isnumeric() or int(tokens[5]) <= 0:
-        return {
-            "valid": False, 
-            "error_number": 2, 
-            "error": errors[2]
-        }
+        return ValidationResult(False, 2, errors[2])
     else:
-        return { 
-            "valid": True,
-            "error_number": 0,
-            "error": errors[0]
-        }
+        return ValidationResult(True, 0, errors[0])
