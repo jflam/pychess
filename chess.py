@@ -24,14 +24,34 @@ KING = 'k'
 
 SYMBOLS = 'pnbrqkPNBRQK'
 
-# This string is game state serialized into a compact string representation
-# lower case is black, upper case is white. The structure has the following 
-# properties:
-#
-# There are six space-separated fields
-# 1st field contains the positions of all of the pieces on the board
-# 6th field contains the current move number and must be > 0
-
+# This string contains a Forsyth-Edwards Notation representation of a 
+# particular board position in a chess game. In this case, this string
+# represents the starting position of a game.
+# 
+# There are 6 fields in FEN notation:
+# 1. Piece placement (from white's persepctive). Each rank is described, 
+#    starting with rank 8 and ending with rank 1. Within each rank, the
+#    contents of each square are described from file 'a' through 'h'. 
+#    Following the Standard Algebraic Notation (SAN), each piece gets
+#    identified by a single letter. White pieces are identified using
+#    upper-case letters (PNBRQK) and black pieces are identified using 
+#    lower-case letters (pnbrqk). Empty squares are noted using digits 
+#    1 through 8 (the number of empty squares). '/' separates ranks.
+# 2. Active color - 'w' means white moves next, 'b' means black.
+# 3. Castling availability. 
+#    '-' neither side can castle. 
+#    'K' White can castle kingside
+#    'W' White can castle queenside
+#    'k' Black can castle kingside
+#    'w' Black can castle queenside
+# 4. En passant target square in algebraic notation. If no square, this 
+#    is '-'. If a pawn has just made a two square move, this is the
+#    position "behind" the pawn.
+# 5. Halfmove clock. This is the number of halfmoves since the last capture
+#    or pawn advance. This is ued to determine if a draw can be claimed under
+#    the fifty move rule.
+# 6. Fullmove number. The number of the full move. It starts at 1 and is 
+#    incremented after Black's move.
 
 DEFAULT_POSITION = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
