@@ -242,14 +242,21 @@ position = tokens[0]
 square = 0
 
 # function to validate a fen
-# TODO: should this return a dataclass instead of a dict? Probably
 
 from typing import NamedTuple
 
+# TODO: Consider turning this into a class with a property getter for error
+# and moving the errors dict into the namespace of this class
 class ValidationResult(NamedTuple):
     valid: bool
     error_number: int
     error: str
+
+# Regular expression validators
+en_passant_validator = re.compile('^(-|[abcdefgh][36])$')
+castle_string_validator = re.compile('^(KQ?k?q?|Qk?q?|kq?|q|-)$')
+white_black_validator = re.compile('^(w|b)$')
+piece_validator = re.compile('^[prnbqkPRNBQK]$')
 
 def validate_fen(fen):
     errors = {
@@ -266,13 +273,63 @@ def validate_fen(fen):
         10: '1st field (piece positions) is invalid [row too large].',
         11: 'Illegal en-passant square',
     }
-
+    
     # 1st criterion: 6 space-seperated fields? 
     tokens = re.split('\s+', fen)
     if len(tokens) != 6:
         return ValidationResult(False, 1, errors[1])
 
-    if not tokens[5].isnumeric() or int(tokens[5]) <= 0:
+    # 2nd criterion: 6th field, move number field, is an integer value > 0
+    elif not tokens[5].isnumeric() or int(tokens[5]) <= 0:
         return ValidationResult(False, 2, errors[2])
+
+    # 3rd criterion: 5th field, half move counter, is an integer >= 0
+    elif not tokens[4].isnumeric() or int(tokens[4]) < 0:
+        return ValidationResult(False, 3, errors[3])
+
+    # 4th criterion: 4th field is a valid en passant-string
+    elif en_passant_validator.match(tokens[3]) is None:
+        return ValidationResult(False, 4, errors[4])
+
+    # 5th criterion: 3rd field is a valid castle-string
+    elif castle_string_validator.match(tokens[2]) is None:
+        return ValidationResult(False, 5, errors[5])
+
+    # 6th criterion: 2nd field is "w" (white) or "b" (black)
+    elif white_black_validator.match(tokens[1]) is None:
+        return ValidationResult(False, 6, errors[6])
+
+    # 7th criterion: 1st field contains 8 rows
     else:
-        return ValidationResult(True, 0, errors[0])
+        rows = tokens[0].split('/')
+        if len(rows) != 8:
+            return ValidationResult(False, 7, errors[7])
+
+        # 8th criterion: check validity of every row
+        for row in rows:
+            sum_fields = 0
+            previous_was_number = False
+
+            for char in row:
+                if char.isnumeric():
+                    # 9th criterion: cannot have consecutive numbrers
+                    if previous_was_number:
+                        return ValidationResult(False, 8, errors[8])
+                    sum_fields += int(char)
+                    previous_was_number = True
+                else:
+                    # 10th criterion: cannot have invalid piece identifiers
+                    if piece_validator.match(char) is None:
+                        return ValidationResult(False, 9, errors[9])
+                    sum_fields += 1
+                    previous_was_number = False
+
+            # 11th criterion: row is too large (> 8 fields in row)
+            if sum_fields != 8:
+                return ValidationResult(False, 10, errors[10])
+
+    # 12th criterion: en-passant squares can only appear in certain rows
+    if tokens[3][0] == '3' and tokens[1] == 'w' or tokens[3][0] == '6' and tokens[1] == 'b':
+       return ValidationResult(False, 11, errors[11])
+
+    return ValidationResult(True, 0, errors[0])
