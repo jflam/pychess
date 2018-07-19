@@ -1,4 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
+from typing import NamedTuple
+import re
 
 #
 # Chess AI - this is initially a port of the chess.js codebase so that I have a
@@ -29,6 +31,7 @@ SYMBOLS = 'pnbrqkPNBRQK'
 # represents the starting position of a game.
 # 
 # There are 6 fields in FEN notation:
+#
 # 1. Piece placement (from white's persepctive). Each rank is described, 
 #    starting with rank 8 and ending with rank 1. Within each rank, the
 #    contents of each square are described from file 'a' through 'h'. 
@@ -136,6 +139,11 @@ class BITS:
     KSIDE_CASTLE: int = 32
     QSIDE_CASTLE: int = 64
 
+@dataclass
+class Piece:
+    type: str 
+    color: str 
+
 RANK_1 = 7
 RANK_2 = 6
 RANK_3 = 5
@@ -149,7 +157,7 @@ RANK_8 = 0
 # represented as a 1-dimensional vector, and this is used to map
 
 @dataclass
-class SQUARES:
+class Squares:
     a8: int = 0
     b8: int = 1
     c8: int = 2
@@ -215,6 +223,11 @@ class SQUARES:
     g1: int = 118
     h1: int = 119
 
+# HACKHACK generate a copy of SQUARES as a dict
+# I use this to see if a key exists
+SQUARES = Squares()
+SQUARES_dict = asdict(SQUARES)
+
 ROOKS = {
     WHITE: [
         {'square': SQUARES.a1, 'flag': BITS.QSIDE_CASTLE},
@@ -232,16 +245,10 @@ ROOKS = {
 # only the left half of the board is used to represent
 # the game position.
 
-board = [
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-]
+# TODO: figure out if there's a better data structure
+# numpy array? that I should be using instead of a list
+
+board = [None] * 128
 
 # Global state variables for the game
 
@@ -254,16 +261,170 @@ move_number = 1
 history = []
 header = {}
 
-import re
-fen = DEFAULT_POSITION
-tokens = re.split('\s+', fen)
-print(tokens)
-position = tokens[0]
-square = 0
+def update_setup(fen):
+    if len(history) > 0:
+        return
 
-# function to validate a fen
+    if fen != DEFAULT_POSITION:
+        header['Setup'] = '1'
+        header['FEN'] = fen
+    else:
+        del header['Setup']
+        del header['FEN']
 
-from typing import NamedTuple
+def generate_fen():
+    empty = 0
+    fen = ''
+
+    # Iterate over all of the squares in the board data structure
+    i = SQUARES.a8
+    while i <- SQUARES.h1:
+        if board[i] is None:
+            empty += 1
+        else:
+            # We have found a piece on the row, so write out the number
+            # of empty squares before proceeding
+            if empty > 0:
+                fen += str(empty)
+                empty = 0
+
+            color = board[i].color
+            piece = board[i].type 
+
+            # White pieces are uppercase, black pieces are lowercase
+            if color == WHITE:
+                fen += piece.upper()
+            else:
+                fen += piece.lower()
+
+        # When we roll off the right hand side of the board data structure
+        # we need to write out the number of empties (if needed) followed
+        # by a row terminator character, and then skip to the next row in 
+        # the board data structure.
+        if (i + 1) & 0x88:
+            if empty > 0:
+                fen += str(empty)
+            
+            if square != SQUARES.h1:
+                fen += '/'
+            
+            empty = 0
+            i += 8 
+            
+        i += 1
+    
+    # Compute allowable castling states
+    cflags = ''
+    if castling[WHITE] & BITS.KSIDE_CASTLE:
+        cflags += 'K'
+    elif castling[WHITE] & BITS.QSIDE_CASTLE:
+        cflags += 'Q'
+    elif castling[BLACK] & BITS.KSIDE_CASTLE:
+        cflags += 'k'
+    elif castling[BLACK] & BITS.QSIDE_CASTLE:
+        cflags += 'q'
+
+    if cflags == '':
+        cflags = '-'
+
+    # Compute en passant state
+    if ep_square == EMPTY:
+        epflags = '-'
+    else:
+        epflags = algebraic(ep_square)
+
+    return ' '.join([fen, turn, cflags, epflags, str(half_moves), str(move_number)])
+
+def clear():
+    board = [None] * 128
+    kings = {'w': EMPTY, 'b': EMPTY}
+    turn = WHITE
+    castling = {'w': 0, 'b': 0}
+    ep_square = EMPTY
+    half_moves = 0
+    move_number = 1
+    history = []
+    header = {}
+    update_setup(generate_fen())
+
+def get_rank(i):
+    return i >> 4
+
+def get_file(i):
+    return i & 0xF
+
+def algebraic(i):
+    f = get_file(i) 
+    r = get_rank(i) 
+    return "abcdefgh"[f] + "87654321"[r]
+    
+# Piece is a dictionary with type and color fields
+def put(piece: Piece, square):
+    # Is type of piece valid?
+    if SYMBOLS.find(piece.type.lower()) == -1:
+        return False
+
+    # Is square valid?
+    if not square in SQUARES_dict:
+        return False
+
+    index = SQUARES_dict[square]
+    
+    if piece.type == KING and not (kings[piece.color] == EMPTY or kings[piece.color == index]):
+        return False
+
+    board[index] = piece
+    if piece.type == KING:
+        kings[piece.color] = index
+
+    # TODO: These calls to generate_fen() and update_setup() seem really inefficient
+    update_setup(generate_fen())
+    return True
+
+# Get a piece from the board
+def get(square):
+    return board[SQUARES_dict[square]]
+
+# Remove a piecd from the board
+def remove(square):
+    piece = get(square)
+    board[SQUARES_dict[square]] = None
+    if piece is not None and piece.type == KING:
+        kings[piece.color] = EMPTY
+
+    update_setup(generate_fen())
+    return piece
+
+def load(fen):
+    tokens = re.split(r'\s+', fen)
+    position = tokens[0]
+    square = 0
+
+    if not validate_fen(fen).valid:
+        return false
+
+    clear()
+
+    for i in range(len(position)):
+        piece = position[i]
+
+        if piece == '/':
+            # end of line, skip 8 squares
+            square += 8
+        elif piece.isnumeric():
+            # empty squares, skip the specified number
+            square += int(piece)
+        else:
+            if piece.islower():
+                color = BLACK
+            else:
+                color = WHITE
+            
+            put(Piece(piece.lower(), color), algebraic(square))
+            square += 1
+
+def reset():
+    load(DEFAULT_POSITION)
 
 # TODO: Consider turning this into a class with a property getter for error
 # and moving the errors dict into the namespace of this class
@@ -278,6 +439,7 @@ castle_string_validator = re.compile('^(KQ?k?q?|Qk?q?|kq?|q|-)$')
 white_black_validator = re.compile('^(w|b)$')
 piece_validator = re.compile('^[prnbqkPRNBQK]$')
 
+# Function to validate a FEN string
 def validate_fen(fen):
     errors = {
         0: 'No errors.',
@@ -353,3 +515,10 @@ def validate_fen(fen):
        return ValidationResult(False, 11, errors[11])
 
     return ValidationResult(True, 0, errors[0])
+
+fen = None
+
+if fen is None:
+    load(DEFAULT_POSITION)
+else:
+    load(fen)
