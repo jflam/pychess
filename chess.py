@@ -266,11 +266,13 @@ def update_setup(fen):
         return
 
     if fen != DEFAULT_POSITION:
-        header['Setup'] = '1'
+        header['SetUp'] = '1'
         header['FEN'] = fen
     else:
-        del header['Setup']
-        del header['FEN']
+        if 'SetUp' in header.keys():
+            del header['SetUp']
+        if 'FEN' in header.keys():
+            del header['FEN']
 
 def generate_fen():
     empty = 0
@@ -278,7 +280,7 @@ def generate_fen():
 
     # Iterate over all of the squares in the board data structure
     i = SQUARES.a8
-    while i <- SQUARES.h1:
+    while i <= SQUARES.h1:
         if board[i] is None:
             empty += 1
         else:
@@ -305,7 +307,7 @@ def generate_fen():
             if empty > 0:
                 fen += str(empty)
             
-            if square != SQUARES.h1:
+            if i != SQUARES.h1:
                 fen += '/'
             
             empty = 0
@@ -317,11 +319,11 @@ def generate_fen():
     cflags = ''
     if castling[WHITE] & BITS.KSIDE_CASTLE:
         cflags += 'K'
-    elif castling[WHITE] & BITS.QSIDE_CASTLE:
+    if castling[WHITE] & BITS.QSIDE_CASTLE:
         cflags += 'Q'
-    elif castling[BLACK] & BITS.KSIDE_CASTLE:
+    if castling[BLACK] & BITS.KSIDE_CASTLE:
         cflags += 'k'
-    elif castling[BLACK] & BITS.QSIDE_CASTLE:
+    if castling[BLACK] & BITS.QSIDE_CASTLE:
         cflags += 'q'
 
     if cflags == '':
@@ -370,7 +372,7 @@ def put(piece: Piece, square):
 
     index = SQUARES_dict[square]
     
-    if piece.type == KING and not (kings[piece.color] == EMPTY or kings[piece.color == index]):
+    if piece.type == KING and not (kings[piece.color] == EMPTY or kings[piece.color] == index):
         return False
 
     board[index] = piece
@@ -405,6 +407,7 @@ def load(fen):
 
     clear()
 
+    # initialize board position
     for i in range(len(position)):
         piece = position[i]
 
@@ -422,6 +425,31 @@ def load(fen):
             
             put(Piece(piece.lower(), color), algebraic(square))
             square += 1
+
+    # initialize turn state
+    turn = tokens[1]
+
+    # initialize castling state
+    if tokens[2].find('K') > -1:
+        castling[WHITE] |= BITS.KSIDE_CASTLE
+    if tokens[2].find('Q') > -1:
+        castling[WHITE] |= BITS.QSIDE_CASTLE
+    if tokens[2].find('k') > -1:
+        castling[BLACK] |= BITS.KSIDE_CASTLE
+    if tokens[2].find('q') > -1:
+        castling[BLACK] |= BITS.QSIDE_CASTLE
+
+    # initialize en passant state
+    if tokens[3] == '-':
+        ep_square = EMPTY
+    else:
+        ep_square = SQUARES_dict[tokens[3]]
+
+    # initialize move counters
+    half_moves = int(tokens[4])
+    move_number = int(tokens[5])
+
+    return True
 
 def reset():
     load(DEFAULT_POSITION)
